@@ -1,0 +1,289 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+  parentId    String?
+  parent      Category? @relation("CategoryChildren", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryChildren")
+  products    Product[]
+  collections Collection[]
+  categoryPage CategoryPage?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Collection {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+  products    Product[]
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("collections")
+}
+
+model Product {
+  id           String           @id @default(cuid())
+  name         String
+  slug         String           @unique
+  description  String?          @db.Text
+  shortDesc    String?
+  price        Float
+  comparePrice Float?
+  cost         Float?
+  sku          String?          @unique
+  barcode      String?
+  trackStock   Boolean          @default(true)
+  stock        Int              @default(0)
+  lowStock     Int              @default(5)
+  weight       Float?
+  status       ProductStatus    @default(DRAFT)
+  isActive     Boolean          @default(true)
+  isFeatured   Boolean          @default(false)
+  tags         String?          @db.Text // JSON array as string
+  seoTitle     String?
+  seoDesc      String?          @db.Text
+  images       String?          @db.Text // JSON array as string
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  stockMovements StockMovement[]
+  categoryId    String?
+  category      Category?        @relation(fields: [categoryId], references: [id])
+  collectionId  String?
+  collection    Collection?      @relation(fields: [collectionId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id             String          @id @default(cuid())
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String // e.g., "Size: 42, Color: Black"
+  sku            String?         @unique
+  price          Float?
+  stock          Int             @default(0)
+  options        String          @db.Text // JSON object: {"size": "42", "color": "black"}
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("product_variants")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?  @unique
+  phone     String
+  wilaya    String
+  commune   String
+  address   String   @db.Text
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("customers")
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  items           OrderItem[]
+  subtotal        Float
+  shippingCost    Float         @default(0)
+  total           Float
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(COD)
+  paymentStatus   PaymentStatus @default(PENDING)
+  shippingMethod  String        @default("standard")
+  trackingNumber  String?
+  yalidineId      String?       @unique
+  notes           String?       @db.Text
+  internalNotes   String?       @db.Text
+  confirmedAt     DateTime?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String          @id @default(cuid())
+  orderId           String
+  order             Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id])
+  productVariantId  String?
+  productVariant    ProductVariant? @relation(fields: [productVariantId], references: [id])
+  quantity          Int
+  unitPrice         Float
+  totalPrice        Float
+  productName       String // Store product name at time of order
+  productSku        String? // Store SKU at time of order
+  variantOptions    String? @db.Text // Store variant options at time of order
+
+  @@map("order_items")
+}
+
+model StockMovement {
+  id               String          @id @default(cuid())
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariantId String?
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  type             StockMoveType
+  quantity         Int
+  reason           String?
+  reference        String? // Order ID, adjustment ID, etc.
+  createdAt        DateTime        @default(now())
+
+  @@map("stock_movements")
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+  type  String @default("string") // string, number, boolean, json
+
+  @@map("settings")
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  COD
+  BANK_TRANSFER
+  CCP
+  EDAHABIA
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum StockMoveType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+// Content Management Models
+model HomeSection {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  type        String   // hero, categories, collection, advantages, new-products, etc.
+  content     String   @db.LongText // JSON content for the section
+  isVisible   Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("home_sections")
+}
+
+model CategoryPage {
+  id          String   @id @default(cuid())
+  categoryId  String   @unique
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  heroImage   String?
+  heroTitle   String?
+  heroSubtitle String? @db.Text
+  description String?  @db.Text
+  seoTitle    String?
+  seoDescription String? @db.Text
+  customCss   String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("category_pages")
+}
+
+model MediaFile {
+  id          String     @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  url         String
+  alt         String?
+  tags        String?    @db.Text // JSON array as string
+  folder      String?    @default("/")
+  isUsed      Boolean    @default(false)
+  usageCount  Int        @default(0)
+  uploadedBy  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("media_files")
+}

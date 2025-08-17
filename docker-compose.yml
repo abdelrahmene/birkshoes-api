@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: birkshoes
+      MYSQL_USER: birkshoes
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  api:
+    build: .
+    restart: always
+    environment:
+      DATABASE_URL: mysql://birkshoes:password@mysql:3306/birkshoes
+      JWT_SECRET: your-super-secret-jwt-key
+      NODE_ENV: production
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mysql
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:

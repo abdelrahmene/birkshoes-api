@@ -1,0 +1,49 @@
+-- Créer quelques fichiers média de test
+INSERT INTO media_files (
+  id, 
+  filename, 
+  originalName, 
+  mimeType, 
+  size, 
+  path, 
+  url, 
+  folder, 
+  createdAt, 
+  updatedAt
+) VALUES 
+(
+  'test1', 
+  'hero-bg-1.jpg', 
+  'hero-background-1.jpg', 
+  'image/jpeg', 
+  1024000, 
+  '/uploads/content/hero-bg-1.jpg', 
+  '/uploads/content/hero-bg-1.jpg', 
+  'content', 
+  NOW(), 
+  NOW()
+),
+(
+  'test2', 
+  'product-image-1.jpg', 
+  'product-sample-1.jpg', 
+  'image/jpeg', 
+  512000, 
+  '/uploads/products/product-image-1.jpg', 
+  '/uploads/products/product-image-1.jpg', 
+  'products', 
+  NOW(), 
+  NOW()
+),
+(
+  'test3', 
+  'category-banner.jpg', 
+  'category-banner-sample.jpg', 
+  'image/jpeg', 
+  768000, 
+  '/uploads/categories/category-banner.jpg', 
+  '/uploads/categories/category-banner.jpg', 
+  'categories', 
+  NOW(), 
+  NOW()
+);
