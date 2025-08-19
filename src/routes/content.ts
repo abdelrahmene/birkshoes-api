@@ -6,11 +6,18 @@ import { z } from 'zod';
 
 const router = Router();
 
-// GET /api/content/home-sections - Get home page sections
+// GET /api/content/home-sections - Get home page sections (avec debug amélioré)
 router.get('/home-sections', asyncHandler(async (req, res) => {
+  console.log('🔍 API: Récupération des sections home...');
+  
   const sections = await prisma.homeSection.findMany({
     where: { isVisible: true },
     orderBy: { order: 'asc' }
+  });
+
+  console.log(`✅ API: ${sections.length} sections trouvées`);
+  sections.forEach(section => {
+    console.log(`📄 API: Section - ID: ${section.id}, Type: ${section.type}, Titre: ${section.title}, Visible: ${section.isVisible}, Ordre: ${section.order}`);
   });
 
   const sectionsWithParsedContent = sections.map(section => ({
@@ -18,6 +25,7 @@ router.get('/home-sections', asyncHandler(async (req, res) => {
     content: section.content ? JSON.parse(section.content) : {}
   }));
 
+  console.log('✅ API: Sections avec contenu parsé renvoyées');
   res.json(sectionsWithParsedContent);
 }));
 
@@ -33,6 +41,24 @@ router.get('/home-sections/all', asyncHandler(async (req, res) => {
   }));
 
   res.json(sectionsWithParsedContent);
+}));
+
+// GET /api/content/home-section/:id - Get specific home section
+router.get('/home-section/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  const section = await prisma.homeSection.findUnique({
+    where: { id }
+  });
+
+  if (!section) {
+    return res.status(404).json({ error: 'Home section not found' });
+  }
+
+  res.json({
+    ...section,
+    content: section.content ? JSON.parse(section.content) : {}
+  });
 }));
 
 // POST /api/content/home-sections

@@ -46,12 +46,38 @@ router.post('/login', asyncHandler(async (req, res) => {
   });
 }));
 
+// Me - Get current user info
+router.get('/me', asyncHandler(async (req, res) => {
+const token = req.header('Authorization')?.replace('Bearer ', '');
+  
+if (!token) {
+  return res.status(401).json({ error: 'No token provided' });
+}
+
+try {
+const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
+
+const user = await prisma.user.findUnique({
+  where: { id: decoded.id },
+    select: { id: true, email: true, name: true, role: true }
+    });
+
+if (!user) {
+    return res.status(401).json({ error: 'Invalid token' });
+    }
+
+res.json({ user });
+} catch (error) {
+res.status(401).json({ error: 'Invalid token' });
+}
+}));
+
 // Register (admin only - pour créer des utilisateurs)
 router.post('/register', asyncHandler(async (req, res) => {
   const { email, password, name } = registerSchema.parse(req.body);
 
   const hashedPassword = await bcrypt.hash(password, 12);
-
+  
   const user = await prisma.user.create({
     data: {
       email,
