@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config/config';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 
@@ -19,14 +21,32 @@ import settingsRoutes from './routes/settings';
 import uploadRoutes from './routes/upload';
 import contentRoutes from './routes/content';
 import mediaRoutes from './routes/media';
+import imagesRoutes from './routes/images';
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// Security middleware avec configuration CORS adaptée
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Configuration CORS étendue
 app.use(cors({
-  origin: config.allowedOrigins,
-  credentials: true
+  origin: function(origin, callback) {
+    // Permettre les requêtes sans origin (comme les apps mobiles) et localhost en développement
+    if (!origin || config.allowedOrigins.includes(origin) || 
+        (config.nodeEnv === 'development' && origin.includes('localhost'))) {
+      callback(null, true);
+    } else {
+      console.log(`❌ [CORS] Origin refusé: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Range', 'Cache-Control'],
+  exposedHeaders: ['Content-Length', 'Content-Type']
 }));
 
 // Rate limiting
@@ -51,6 +71,76 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// 🔧 Debug endpoint pour vérifier la configuration CORS
+app.get('/debug/cors', (req, res) => {
+  console.log('🔧 [DEBUG] Headers de la requête:', req.headers);
+  
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'Non spécifié',
+    userAgent: req.headers['user-agent'] || 'Non spécifié',
+    method: req.method,
+    url: req.url,
+    allowedOrigins: config.allowedOrigins,
+    corsHeaders: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
+      'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers')
+    },
+    message: 'Configuration CORS active'
+  };
+  
+  console.log('🔧 [DEBUG] Info CORS:', debugInfo);
+  res.json(debugInfo);
+});
+
+// 🖼️ Configuration globale pour les uploads avec CORS
+app.use('/uploads', (req, res, next) => {
+  console.log('🌍 [UPLOADS-MIDDLEWARE] ====================================');
+  console.log(`🔧 [UPLOADS-CORS] ${req.method} ${req.originalUrl}`);
+  console.log(`🔧 [UPLOADS-CORS] Origin: ${req.headers.origin || 'Non spécifié'}`);
+  console.log(`🔧 [UPLOADS-CORS] Referer: ${req.headers.referer || 'Non spécifié'}`);
+  console.log(`🔧 [UPLOADS-CORS] User-Agent: ${(req.headers['user-agent'] || '').substring(0, 50)}...`);
+  console.log(`🔧 [UPLOADS-CORS] Accept: ${req.headers.accept || 'Non spécifié'}`);
+  console.log(`🔧 [UPLOADS-CORS] Host: ${req.headers.host || 'Non spécifié'}`);
+  console.log('🌍 [UPLOADS-MIDDLEWARE] ====================================');
+  
+  // Headers CORS obligatoires pour tous les uploads
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Range',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    'Cross-Origin-Embedder-Policy': 'unsafe-none',
+    'Cross-Origin-Opener-Policy': 'unsafe-none',
+    'Referrer-Policy': 'no-referrer-when-downgrade',
+    'Vary': 'Origin'
+  };
+  
+  // Appliquer tous les headers
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    res.setHeader(key, value);
+    console.log(`⚙️ [UPLOADS-HEADERS] ${key}: ${value}`);
+  });
+  
+  // Gestion des requêtes OPTIONS (preflight CORS)
+  if (req.method === 'OPTIONS') {
+    console.log('✅ [UPLOADS-OPTIONS] Requête OPTIONS détectée - Traitement preflight CORS');
+    console.log('✅ [UPLOADS-OPTIONS] Headers OPTIONS envoyés, réponse 200');
+    res.status(200).end();
+    return;
+  }
+  
+  console.log('➡️ [UPLOADS-MIDDLEWARE] Passage au middleware suivant...');
+  next();
+});
+
+// 🖼️ Routes personnalisées pour les images depuis l'admin (prioritaires)
+app.use('/uploads', imagesRoutes);
+
+// 🖼️ Fallback pour servir les fichiers statiques locaux
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
@@ -65,8 +155,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/media', mediaRoutes);
 
-// Serve static files (uploads)
-app.use('/uploads', express.static('uploads'));
+// Les fichiers statiques sont maintenant servis avec les headers CORS appropriés ci-dessus
 
 // Error handling
 app.use(notFound);

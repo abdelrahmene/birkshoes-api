@@ -1,0 +1,1 @@
+Test file pour vérifier le serveur de fichiers statiques
