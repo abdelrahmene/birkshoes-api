@@ -351,4 +351,53 @@ router.delete('/media/:id', auth, adminOnly, asyncHandler(async (req, res) => {
   res.json({ message: 'Media file deleted successfully' });
 }));
 
+// GET /api/content/home-section/:id/collections - Get collection items from home section
+router.get('/home-section/:id/collections', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  const section = await prisma.homeSection.findUnique({
+    where: { id }
+  });
+
+  if (!section) {
+    return res.status(404).json({ error: 'Home section not found' });
+  }
+
+  const content = section.content ? JSON.parse(section.content) : {};
+  const items = content.items || [];
+
+  res.json({ items, carouselConfig: content.carouselConfig });
+}));
+
+// PUT /api/content/home-section/:id/collections - Update collection items
+router.put('/home-section/:id/collections', auth, adminOnly, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { items, carouselConfig } = req.body;
+
+  const section = await prisma.homeSection.findUnique({
+    where: { id }
+  });
+
+  if (!section) {
+    return res.status(404).json({ error: 'Home section not found' });
+  }
+
+  const existingContent = section.content ? JSON.parse(section.content) : {};
+  const updatedContent = {
+    ...existingContent,
+    items: items || [],
+    carouselConfig: carouselConfig || existingContent.carouselConfig
+  };
+
+  const updatedSection = await prisma.homeSection.update({
+    where: { id },
+    data: { content: JSON.stringify(updatedContent) }
+  });
+
+  res.json({
+    ...updatedSection,
+    content: JSON.parse(updatedSection.content)
+  });
+}));
+
 export default router;

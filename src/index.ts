@@ -36,7 +36,7 @@ app.use(cors({
   origin: function(origin, callback) {
     // Permettre les requêtes sans origin (comme les apps mobiles) et localhost en développement
     if (!origin || config.allowedOrigins.includes(origin) || 
-        (config.nodeEnv === 'development' && origin.includes('localhost'))) {
+        (config.nodeEnv === 'development' && origin?.includes('localhost'))) {
       callback(null, true);
     } else {
       console.log(`❌ [CORS] Origin refusé: ${origin}`);
@@ -44,9 +44,26 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Range', 'Cache-Control'],
-  exposedHeaders: ['Content-Length', 'Content-Type']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Accept', 
+    'Range', 
+    'Cache-Control',
+    'X-Requested-With',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers',
+    'User-Agent',
+    'Referer',
+    'Accept-Encoding',
+    'Accept-Language',
+    'Connection'
+  ],
+  exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 }));
 
 // Rate limiting
@@ -56,6 +73,22 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP'
 });
 app.use('/api/', limiter);
+
+// Middleware pour gérer les requêtes preflight CORS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log(`✅ [PREFLIGHT] ${req.method} ${req.originalUrl} - Origin: ${req.headers.origin}`);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,HEAD,PATCH');
+    res.header('Access-Control-Allow-Headers', 
+      'Content-Type,Authorization,Accept,Range,Cache-Control,X-Requested-With,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,User-Agent,Referer,Accept-Encoding,Accept-Language,Connection'
+    );
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 heures
+    return res.status(200).json({});
+  }
+  next();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
