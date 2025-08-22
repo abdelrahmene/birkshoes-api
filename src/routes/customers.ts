@@ -1,23 +1,32 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { auth, adminOnly } from '../middlewares/auth';
+import { auth, adminOnly, AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { CreateCustomerRequest } from '../types';
 
 const router = Router();
 
+interface CreateCustomerRequest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone: string;
+  wilaya: string;
+  commune: string;
+  address: string;
+}
+
 // GET /api/customers
-router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { search, page = '1', limit = '20' } = req.query;
   
   const where: any = {};
   
   if (search) {
     where.OR = [
-      { firstName: { contains: search as string, mode: 'insensitive' } },
-      { lastName: { contains: search as string, mode: 'insensitive' } },
-      { email: { contains: search as string, mode: 'insensitive' } },
-      { phone: { contains: search as string, mode: 'insensitive' } }
+      { firstName: { contains: search as string } },
+      { lastName: { contains: search as string } },
+      { email: { contains: search as string } },
+      { phone: { contains: search as string } }
     ];
   }
 
@@ -50,7 +59,7 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/customers/:id
-router.get('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
   const customer = await prisma.customer.findUnique({
@@ -77,7 +86,7 @@ router.get('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/customers
-router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const customerData = req.body as CreateCustomerRequest;
 
   const customer = await prisma.customer.create({
@@ -101,7 +110,7 @@ router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/customers/:id
-router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { firstName, lastName, email, phone, wilaya, commune, address } = req.body;
 
@@ -127,7 +136,7 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/customers/:id
-router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
   // Check if customer has orders
@@ -149,7 +158,7 @@ router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/customers/search
-router.get('/search', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/search', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { q } = req.query;
   
   if (!q) {
@@ -159,10 +168,10 @@ router.get('/search', auth, adminOnly, asyncHandler(async (req, res) => {
   const customers = await prisma.customer.findMany({
     where: {
       OR: [
-        { firstName: { contains: q as string, mode: 'insensitive' } },
-        { lastName: { contains: q as string, mode: 'insensitive' } },
-        { email: { contains: q as string, mode: 'insensitive' } },
-        { phone: { contains: q as string, mode: 'insensitive' } }
+        { firstName: { contains: q as string } },
+        { lastName: { contains: q as string } },
+        { email: { contains: q as string } },
+        { phone: { contains: q as string } }
       ]
     },
     take: 10,

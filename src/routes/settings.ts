@@ -1,13 +1,13 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { auth, adminOnly } from '../middlewares/auth';
+import { auth, adminOnly, AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { z } from 'zod';
 
 const router = Router();
 
 // Get all settings
-router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const settings = await prisma.setting.findMany({
     orderBy: { key: 'asc' }
   });
@@ -22,9 +22,7 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
     
     acc[setting.key] = {
       value,
-      type: setting.type,
-      description: setting.description,
-      updatedAt: setting.updatedAt
+      type: setting.type
     };
     return acc;
   }, {} as Record<string, any>);
@@ -36,13 +34,12 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
 const updateSettingSchema = z.object({
   key: z.string(),
   value: z.any(),
-  type: z.enum(['string', 'number', 'boolean', 'json']).optional(),
-  description: z.string().optional()
+  type: z.enum(['string', 'number', 'boolean', 'json']).optional()
 });
 
-router.put('/:key', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/:key', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { key } = req.params;
-  const { value, type = 'string', description } = updateSettingSchema.parse(req.body);
+  const { value, type = 'string' } = updateSettingSchema.parse(req.body);
 
   let stringValue: string;
   if (typeof value === 'object') {
@@ -55,14 +52,12 @@ router.put('/:key', auth, adminOnly, asyncHandler(async (req, res) => {
     where: { key },
     update: {
       value: stringValue,
-      type,
-      description
+      type
     },
     create: {
       key,
       value: stringValue,
-      type,
-      description
+      type
     }
   });
 
@@ -70,7 +65,7 @@ router.put('/:key', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Delete setting
-router.delete('/:key', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:key', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { key } = req.params;
 
   await prisma.setting.delete({
@@ -81,7 +76,7 @@ router.delete('/:key', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Get store configuration
-router.get('/store', asyncHandler(async (req, res) => {
+router.get('/store', asyncHandler(async (req: Request, res: Response) => {
   const storeSettings = await prisma.setting.findMany({
     where: {
       key: {
@@ -130,7 +125,7 @@ const updateStoreConfigSchema = z.object({
   store_status: z.enum(['open', 'closed', 'maintenance']).optional()
 });
 
-router.put('/store', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/store', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const updates = updateStoreConfigSchema.parse(req.body);
 
   const results = [];
@@ -157,7 +152,7 @@ router.put('/store', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Get payment settings
-router.get('/payment', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/payment', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const paymentSettings = await prisma.setting.findMany({
     where: {
       key: {
@@ -182,7 +177,7 @@ router.get('/payment', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Update payment settings
-router.put('/payment', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/payment', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const updates = req.body;
 
   const results = [];
@@ -209,7 +204,7 @@ router.put('/payment', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Get shipping settings
-router.get('/shipping', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/shipping', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const shippingSettings = await prisma.setting.findMany({
     where: {
       key: {
@@ -234,7 +229,7 @@ router.get('/shipping', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Update shipping settings
-router.put('/shipping', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/shipping', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const updates = req.body;
 
   const results = [];

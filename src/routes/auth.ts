@@ -1,10 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { config } from '../config/config';
 import { asyncHandler } from '../middlewares/errorHandler';
+import { AuthRequest } from '../middlewares/auth';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const registerSchema = z.object({
 });
 
 // Login
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = loginSchema.parse(req.body);
 
   const user = await prisma.user.findUnique({
@@ -31,9 +32,11 @@ router.post('/login', asyncHandler(async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const token = jwt.sign({ id: user.id }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn
-  });
+  const token = jwt.sign(
+    { id: user.id },
+    config.jwtSecret,
+    { expiresIn: '7d' }
+  );
 
   res.json({
     token,
@@ -47,7 +50,7 @@ router.post('/login', asyncHandler(async (req, res) => {
 }));
 
 // Me - Get current user info
-router.get('/me', asyncHandler(async (req, res) => {
+router.get('/me', asyncHandler(async (req: AuthRequest, res: Response) => {
 const token = req.header('Authorization')?.replace('Bearer ', '');
   
 if (!token) {
@@ -73,7 +76,7 @@ res.status(401).json({ error: 'Invalid token' });
 }));
 
 // Register (admin only - pour créer des utilisateurs)
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', asyncHandler(async (req: Request, res: Response) => {
   const { email, password, name } = registerSchema.parse(req.body);
 
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -87,9 +90,11 @@ router.post('/register', asyncHandler(async (req, res) => {
     }
   });
 
-  const token = jwt.sign({ id: user.id }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn
-  });
+  const token = jwt.sign(
+    { id: user.id },
+    config.jwtSecret,
+    { expiresIn: '7d' }
+  );
 
   res.status(201).json({
     token,

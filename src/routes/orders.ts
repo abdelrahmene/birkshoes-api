@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { auth, adminOnly } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -7,7 +7,7 @@ import { CreateOrderRequest } from '../types';
 const router = Router();
 
 // GET /api/orders
-router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { status, page = '1', limit = '20' } = req.query;
   
   const where: any = {};
@@ -68,7 +68,7 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/orders/:id
-router.get('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({
@@ -94,7 +94,7 @@ router.get('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 
   const orderWithImages = {
     ...order,
-    items: order.items.map(item => ({
+    items: (order.items || []).map((item: any) => ({
       ...item,
       product: {
         ...item.product,
@@ -112,7 +112,7 @@ router.get('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/orders
-router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const orderData = req.body as CreateOrderRequest;
 
   // Generate order number
@@ -190,7 +190,7 @@ router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
   });
 
   // Update stock
-  for (const item of order.items) {
+  for (const item of order.items || []) {
     if (item.productVariantId) {
       await prisma.productVariant.update({
         where: { id: item.productVariantId },
@@ -218,7 +218,7 @@ router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
 
   const orderWithImages = {
     ...order,
-    items: order.items.map(item => ({
+    items: (order.items || []).map((item: any) => ({
       ...item,
       product: {
         ...item.product,
@@ -236,14 +236,14 @@ router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/orders/:id
-router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status, paymentStatus, trackingNumber, yalidineId, notes, internalNotes } = req.body;
 
   const updateData: any = {};
   
   if (status) {
-    updateData.status = status;
+    updateData.status = status as any;
     
     // Set timestamps based on status
     if (status === 'CONFIRMED') {
@@ -283,7 +283,7 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 
   const orderWithImages = {
     ...order,
-    items: order.items.map(item => ({
+    items: (order.items || []).map((item: any) => ({
       ...item,
       product: {
         ...item.product,
@@ -301,7 +301,7 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/orders/:id
-router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const order = await prisma.order.findUnique({

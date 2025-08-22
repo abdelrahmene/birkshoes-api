@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { auth, adminOnly } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -6,7 +6,7 @@ import { asyncHandler } from '../middlewares/errorHandler';
 const router = Router();
 
 // GET /api/dashboard - Dashboard stats
-router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { period = '30' } = req.query;
   
   const daysBack = parseInt(period as string);
@@ -67,7 +67,7 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
     prisma.product.findMany({
       where: {
         OR: [
-          { stock: { lte: prisma.product.fields.lowStock } },
+          { stock: { lte: 5 } },
           { variants: { some: { stock: { lte: 5 } } } }
         ],
         isActive: true
@@ -147,7 +147,7 @@ router.get('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/dashboard/analytics - Advanced analytics
-router.get('/analytics', auth, adminOnly, asyncHandler(async (req, res) => {
+router.get('/analytics', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { period = '30' } = req.query;
   
   const daysBack = parseInt(period as string);

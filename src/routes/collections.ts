@@ -1,12 +1,12 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { auth, adminOnly } from '../middlewares/auth';
+import { auth, adminOnly, AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 
 const router = Router();
 
 // GET /api/collections
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const { includeProducts } = req.query;
 
   const collections = await prisma.collection.findMany({
@@ -41,7 +41,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/collections/:id
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const collection = await prisma.collection.findUnique({
@@ -80,7 +80,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/collections
-router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { name, slug, description, image, categoryId, isActive } = req.body;
 
   const collectionSlug = slug || name.toLowerCase()
@@ -110,7 +110,7 @@ router.post('/', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/collections/:id
-router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { name, slug, description, image, categoryId, isActive } = req.body;
 
@@ -138,7 +138,7 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/collections/:id
-router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
   // Check if collection has products

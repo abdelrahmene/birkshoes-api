@@ -1,12 +1,12 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { auth, adminOnly } from '../middlewares/auth';
+import { auth, adminOnly, AuthRequest } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
 
 const router = Router();
 
-// Products with stock info
-router.get('/products', auth, adminOnly, asyncHandler(async (req, res) => {
+// Get products with stock info
+router.get('/products', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { lowStock, status } = req.query;
   
   const where: any = {};
@@ -28,9 +28,6 @@ router.get('/products', auth, adminOnly, asyncHandler(async (req, res) => {
       variants: true,
       category: {
         select: { name: true }
-      },
-      _count: {
-        select: { variants: true }
       }
     },
     orderBy: { updatedAt: 'desc' }
@@ -59,8 +56,8 @@ router.get('/products', auth, adminOnly, asyncHandler(async (req, res) => {
   res.json(productsWithStock);
 }));
 
-// Stock movements
-router.get('/movements', auth, adminOnly, asyncHandler(async (req, res) => {
+// Get stock movements
+router.get('/movements', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { productId, type, page = '1', limit = '50' } = req.query;
   
   const where: any = {};
@@ -98,8 +95,8 @@ router.get('/movements', auth, adminOnly, asyncHandler(async (req, res) => {
   });
 }));
 
-// Stock alerts
-router.get('/alerts', auth, adminOnly, asyncHandler(async (req, res) => {
+// Get stock alerts
+router.get('/alerts', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const lowStockProducts = await prisma.product.findMany({
     where: {
       OR: [
@@ -151,7 +148,7 @@ router.get('/alerts', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // Sync stock
-router.post('/sync-stock', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/sync-stock', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const products = await prisma.product.findMany({
     include: { variants: true }
   });
@@ -162,18 +159,18 @@ router.post('/sync-stock', auth, adminOnly, asyncHandler(async (req, res) => {
     for (const product of products) {
       if (product.variants.length > 0) {
         const totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
-        
-        await tx.product.update({
-          where: { id: product.id },
-          data: { stock: totalStock }
-        });
-        
-        syncedCount++;
+        if (product.stock !== totalStock) {
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stock: totalStock }
+          });
+          syncedCount++;
+        }
       }
     }
   });
 
-  res.json({ message: `Synced stock for ${syncedCount} products` });
+  res.json({ message: 'Stock synchronization completed', syncedCount });
 }));
 
 export default router;

@@ -18,9 +18,9 @@ export class ProductService {
     if (status) where.status = status;
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search } },
+        { sku: { contains: search } },
+        { description: { contains: search } }
       ];
     }
 
@@ -79,10 +79,34 @@ export class ProductService {
   }
 
   async createProduct(data: CreateProductInput) {
+    // Generate slug from name
+    const slug = data.name.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
     return await prisma.product.create({
       data: {
-        ...data,
-        images: data.images ? JSON.stringify(data.images) : '[]'
+        name: data.name,
+        slug,
+        description: data.description,
+        price: data.price,
+        sku: data.sku,
+        images: data.images ? JSON.stringify(data.images) : '[]',
+        stock: data.stock || 0,
+        lowStock: data.lowStockThreshold || 5,
+        isActive: data.isActive ?? true,
+        status: 'ACTIVE',
+        category: data.categoryId ? { connect: { id: data.categoryId } } : undefined,
+        collection: data.collectionId ? { connect: { id: data.collectionId } } : undefined,
+        variants: data.variants ? {
+          create: data.variants.map(variant => ({
+            name: variant.name,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+            options: variant.options ? JSON.stringify(variant.options) : '{}'
+          }))
+        } : undefined
       },
       include: {
         category: true,
@@ -92,12 +116,30 @@ export class ProductService {
   }
 
   async updateProduct(id: string, data: UpdateProductInput) {
+    const updateData: any = {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      sku: data.sku,
+      images: data.images ? JSON.stringify(data.images) : undefined,
+      stock: data.stock,
+      lowStock: data.lowStockThreshold,
+      isActive: data.isActive
+    };
+
+    // Handle category connection
+    if (data.categoryId) {
+      updateData.category = { connect: { id: data.categoryId } };
+    }
+
+    // Handle collection connection
+    if (data.collectionId) {
+      updateData.collection = { connect: { id: data.collectionId } };
+    }
+
     return await prisma.product.update({
       where: { id },
-      data: {
-        ...data,
-        images: data.images ? JSON.stringify(data.images) : undefined
-      },
+      data: updateData,
       include: {
         category: true,
         variants: true

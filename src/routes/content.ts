@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { auth, adminOnly } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -7,7 +7,7 @@ import { z } from 'zod';
 const router = Router();
 
 // GET /api/content/home-sections - Get home page sections (avec debug amélioré)
-router.get('/home-sections', asyncHandler(async (req, res) => {
+router.get('/home-sections', asyncHandler(async (req: Request, res: Response) => {
   console.log('🔍 API: Récupération des sections home...');
   
   const sections = await prisma.homeSection.findMany({
@@ -30,7 +30,7 @@ router.get('/home-sections', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/content/home-sections/all (admin) - Temporairement sans auth pour test
-router.get('/home-sections/all', asyncHandler(async (req, res) => {
+router.get('/home-sections/all', asyncHandler(async (req: Request, res: Response) => {
   const sections = await prisma.homeSection.findMany({
     orderBy: { order: 'asc' }
   });
@@ -44,7 +44,7 @@ router.get('/home-sections/all', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/content/home-section/:id - Get specific home section
-router.get('/home-section/:id', asyncHandler(async (req, res) => {
+router.get('/home-section/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   
   const section = await prisma.homeSection.findUnique({
@@ -71,7 +71,7 @@ const createHomeSectionSchema = z.object({
   order: z.number().default(0)
 });
 
-router.post('/home-sections', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/home-sections', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const data = createHomeSectionSchema.parse(req.body);
 
   const section = await prisma.homeSection.create({
@@ -97,7 +97,7 @@ const updateHomeSectionSchema = z.object({
   order: z.number().optional()
 });
 
-router.put('/home-sections/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/home-sections/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const data = updateHomeSectionSchema.parse(req.body);
 
@@ -118,7 +118,7 @@ router.put('/home-sections/:id', auth, adminOnly, asyncHandler(async (req, res) 
 }));
 
 // DELETE /api/content/home-sections/:id
-router.delete('/home-sections/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/home-sections/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   await prisma.homeSection.delete({
@@ -133,7 +133,7 @@ const reorderSectionsSchema = z.object({
   sectionIds: z.array(z.string())
 });
 
-router.patch('/home-sections/reorder', auth, adminOnly, asyncHandler(async (req, res) => {
+router.patch('/home-sections/reorder', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { sectionIds } = reorderSectionsSchema.parse(req.body);
 
   await prisma.$transaction(async (tx) => {
@@ -149,7 +149,7 @@ router.patch('/home-sections/reorder', auth, adminOnly, asyncHandler(async (req,
 }));
 
 // GET /api/content/category-pages/:categoryId
-router.get('/category-pages/:categoryId', asyncHandler(async (req, res) => {
+router.get('/category-pages/:categoryId', asyncHandler(async (req: Request, res: Response) => {
   const { categoryId } = req.params;
 
   const categoryPage = await prisma.categoryPage.findUnique({
@@ -181,7 +181,7 @@ const createCategoryPageSchema = z.object({
   isActive: z.boolean().default(true)
 });
 
-router.post('/category-pages', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/category-pages', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const data = createCategoryPageSchema.parse(req.body);
 
   const categoryPage = await prisma.categoryPage.create({
@@ -208,7 +208,7 @@ const updateCategoryPageSchema = z.object({
   isActive: z.boolean().optional()
 });
 
-router.put('/category-pages/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/category-pages/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const data = updateCategoryPageSchema.parse(req.body);
 
@@ -226,7 +226,7 @@ router.put('/category-pages/:id', auth, adminOnly, asyncHandler(async (req, res)
 }));
 
 // GET /api/content/media - Temporairement sans auth pour test
-router.get('/media', asyncHandler(async (req, res) => {
+router.get('/media', asyncHandler(async (req: Request, res: Response) => {
   const { folder, search, page = '1', limit = '20' } = req.query;
   
   const where: any = {};
@@ -282,7 +282,7 @@ const createMediaFileSchema = z.object({
   uploadedBy: z.string().optional()
 });
 
-router.post('/media', auth, adminOnly, asyncHandler(async (req, res) => {
+router.post('/media', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const data = createMediaFileSchema.parse(req.body);
 
   const mediaFile = await prisma.mediaFile.create({
@@ -306,7 +306,7 @@ const updateMediaFileSchema = z.object({
   isUsed: z.boolean().optional()
 });
 
-router.put('/media/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/media/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const data = updateMediaFileSchema.parse(req.body);
 
@@ -327,7 +327,7 @@ router.put('/media/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/content/media/:id
-router.delete('/media/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/media/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const mediaFile = await prisma.mediaFile.findUnique({
@@ -352,7 +352,7 @@ router.delete('/media/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/content/home-section/:id/collections - Get collection items from home section
-router.get('/home-section/:id/collections', asyncHandler(async (req, res) => {
+router.get('/home-section/:id/collections', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   
   const section = await prisma.homeSection.findUnique({
@@ -370,7 +370,7 @@ router.get('/home-section/:id/collections', asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/content/home-section/:id/collections - Update collection items
-router.put('/home-section/:id/collections', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/home-section/:id/collections', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { items, carouselConfig } = req.body;
 

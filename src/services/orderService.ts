@@ -1,4 +1,5 @@
 import { prisma } from '../config/prisma';
+import { OrderStatus } from '@prisma/client';
 
 export class OrderService {
   async getAllOrders(options: {
@@ -16,8 +17,8 @@ export class OrderService {
     if (search) {
       where.OR = [
         { orderNumber: { contains: search } },
-        { user: { email: { contains: search } } },
-        { user: { name: { contains: search } } }
+        { customer: { email: { contains: search } } },
+        { customer: { firstName: { contains: search } } }
       ];
     }
 
@@ -27,7 +28,7 @@ export class OrderService {
         skip,
         take: limit,
         include: {
-          user: true,
+          customer: true,
           items: {
             include: {
               product: {
@@ -37,9 +38,7 @@ export class OrderService {
                 select: { name: true, options: true }
               }
             }
-          },
-          shippingAddress: true,
-          billingAddress: true
+          }
         },
         orderBy: { createdAt: 'desc' }
       }),
@@ -74,15 +73,13 @@ export class OrderService {
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        user: true,
+        customer: true,
         items: {
           include: {
             product: true,
             productVariant: true
           }
-        },
-        shippingAddress: true,
-        billingAddress: true
+        }
       }
     });
 
@@ -104,12 +101,12 @@ export class OrderService {
     };
   }
 
-  async updateOrderStatus(id: string, status: string) {
+  async updateOrderStatus(id: string, status: OrderStatus) {
     return await prisma.order.update({
       where: { id },
       data: { status },
       include: {
-        user: true,
+        customer: true,
         items: true
       }
     });

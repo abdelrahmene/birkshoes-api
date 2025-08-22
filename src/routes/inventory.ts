@@ -1,122 +1,94 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { auth, adminOnly } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { z } from 'zod';
 
 const router = Router();
 
-// Get inventory overview
-router.get('/overview', auth, adminOnly, asyncHandler(async (req, res) => {
-  const [totalProducts, lowStockProducts, outOfStockProducts, totalCategories] = await Promise.all([
-    prisma.product.count({ where: { isActive: true } }),
-    prisma.product.count({
-      where: {
-        AND: [
-          { isActive: true },
-          {
-            OR: [
-              { stock: { lte: 5 } },
-              { variants: { some: { stock: { lte: 5 } } } }
-            ]
-          }
-        ]
-      }
-    }),
-    prisma.product.count({
-      where: {
-        AND: [
-          { isActive: true },
-          {
-            OR: [
-              { stock: 0 },
-              { variants: { every: { stock: 0 } } }
-            ]
-          }
-        ]
-      }
-    }),
-    prisma.category.count({ where: { isActive: true } })
-  ]);
-
-  res.json({
-    totalProducts,
-    lowStockProducts,
-    outOfStockProducts,
-    totalCategories
-  });
-}));
-
-// Get all products with inventory details
-router.get('/products', auth, adminOnly, asyncHandler(async (req, res) => {
-  const { page = '1', limit = '20', search, category, status } = req.query;
+// Products with stock info
+router.get('/products', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
+  const { lowStock, status } = req.query;
   
   const where: any = {};
   
-  if (search) {
+  if (status) {
+    where.status = status;
+  }
+
+  if (lowStock === 'true') {
     where.OR = [
-      { name: { contains: search as string } },
-      { sku: { contains: search as string } }
+      { stock: { lte: 5 } },
+      { variants: { some: { stock: { lte: 5 } } } }
     ];
   }
-  
-  if (category) {
-    where.categoryId = category;
-  }
-  
-  if (status) {
-    if (status === 'low_stock') {
-      where.OR = [
-        { stock: { lte: 5 } },
-        { variants: { some: { stock: { lte: 5 } } } }
-      ];
-    } else if (status === 'out_of_stock') {
-      where.OR = [
-        { stock: 0 },
-        { variants: { every: { stock: 0 } } }
-      ];
-    }
-  }
 
-  const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-  
-  const [products, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      skip,
-      take: parseInt(limit as string),
-      include: {
-        category: true,
-        variants: true
+  const products = await prisma.product.findMany({
+    where,
+    include: {
+      variants: true,
+      category: {
+        select: { name: true }
       },
-      orderBy: { updatedAt: 'desc' }
-    }),
-    prisma.product.count({ where })
-  ]);
+      _count: {
+        select: { variants: true }
+      }
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
 
-  const productsWithInventory = products.map(product => {
+  const productsWithStock = products.map(product => {
     const variants = product.variants?.map(variant => ({
       ...variant,
       options: variant.options ? JSON.parse(variant.options) : {}
     })) || [];
-    
-    const totalStock = variants.length > 0 
-      ? variants.reduce((sum, variant) => sum + variant.stock, 0)
-      : product.stock;
+
+    const totalVariantStock = variants.reduce((sum, variant) => sum + variant.stock, 0);
+    const effectiveStock = variants.length > 0 ? totalVariantStock : product.stock;
     
     return {
       ...product,
       images: product.images ? JSON.parse(product.images) : [],
       variants,
-      totalStock,
+      effectiveStock,
       isLowStock: variants.length > 0 
         ? variants.some(v => v.stock <= 5)
         : product.stock <= product.lowStock
     };
   });
 
+  res.json(productsWithStock);
+}));
+
+// Stock movements
+router.get('/movements', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
+  const { productId, type, page = '1', limit = '50' } = req.query;
+  
+  const where: any = {};
+  if (productId) where.productId = productId;
+  if (type) where.type = type;
+
+  const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+  const [movements, total] = await Promise.all([
+    prisma.stockMovement.findMany({
+      where,
+      skip,
+      take: parseInt(limit as string),
+      include: {
+        product: {
+          select: { id: true, name: true, sku: true }
+        },
+        productVariant: {
+          select: { id: true, name: true, sku: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.stockMovement.count({ where })
+  ]);
+
   res.json({
-    products: productsWithInventory,
+    movements,
     pagination: {
       page: parseInt(page as string),
       limit: parseInt(limit as string),
@@ -126,153 +98,82 @@ router.get('/products', auth, adminOnly, asyncHandler(async (req, res) => {
   });
 }));
 
-// Update product stock
-const updateStockSchema = z.object({
-  productId: z.string(),
-  variantId: z.string().optional(),
-  newStock: z.number().min(0),
-  reason: z.string().optional()
-});
-
-router.patch('/stock', auth, adminOnly, asyncHandler(async (req, res) => {
-  const { productId, variantId, newStock, reason } = updateStockSchema.parse(req.body);
-
-  await prisma.$transaction(async (tx) => {
-    if (variantId) {
-      // Update variant stock
-      const oldVariant = await tx.productVariant.findUnique({
-        where: { id: variantId }
-      });
-      
-      if (!oldVariant) {
-        throw new Error('Variant not found');
+// Stock alerts
+router.get('/alerts', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
+  const lowStockProducts = await prisma.product.findMany({
+    where: {
+      OR: [
+        { stock: { lte: 5 } },
+        { variants: { some: { stock: { lte: 5 } } } }
+      ],
+      isActive: true
+    },
+    include: {
+      variants: {
+        where: { stock: { lte: 5 } }
       }
-
-      await tx.productVariant.update({
-        where: { id: variantId },
-        data: { stock: newStock }
-      });
-
-      // Log stock movement
-      await tx.stockMovement.create({
-        data: {
-          productId,
-          productVariantId: variantId,
-          type: newStock > oldVariant.stock ? 'IN' : 'OUT',
-          quantity: Math.abs(newStock - oldVariant.stock),
-          previousStock: oldVariant.stock,
-          newStock,
-          reason: reason || 'Manual adjustment'
-        }
-      });
-
-      // Update product total stock
-      const allVariants = await tx.productVariant.findMany({
-        where: { productId }
-      });
-      const totalStock = allVariants.reduce((sum, v) => sum + (v.id === variantId ? newStock : v.stock), 0);
-      
-      await tx.product.update({
-        where: { id: productId },
-        data: { stock: totalStock }
-      });
-    } else {
-      // Update product stock directly
-      const oldProduct = await tx.product.findUnique({
-        where: { id: productId }
-      });
-      
-      if (!oldProduct) {
-        throw new Error('Product not found');
-      }
-
-      await tx.product.update({
-        where: { id: productId },
-        data: { stock: newStock }
-      });
-
-      // Log stock movement
-      await tx.stockMovement.create({
-        data: {
-          productId,
-          type: newStock > oldProduct.stock ? 'IN' : 'OUT',
-          quantity: Math.abs(newStock - oldProduct.stock),
-          previousStock: oldProduct.stock,
-          newStock,
-          reason: reason || 'Manual adjustment'
-        }
-      });
     }
   });
 
-  res.json({ message: 'Stock updated successfully' });
+  const alerts = lowStockProducts.flatMap(product => {
+    const productAlerts = [];
+    
+    if (product.stock <= product.lowStock && product.variants.length === 0) {
+      productAlerts.push({
+        type: 'product',
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        currentStock: product.stock,
+        lowStockThreshold: product.lowStock,
+        severity: product.stock === 0 ? 'critical' : 'warning'
+      });
+    }
+
+    product.variants.forEach(variant => {
+      productAlerts.push({
+        type: 'variant',
+        productId: product.id,
+        productName: product.name,
+        variantId: variant.id,
+        variantName: variant.name,
+        sku: variant.sku,
+        currentStock: variant.stock,
+        lowStockThreshold: 5,
+        severity: variant.stock === 0 ? 'critical' : 'warning'
+      });
+    });
+
+    return productAlerts;
+  });
+
+  res.json(alerts);
 }));
 
-// Bulk stock update
-const bulkUpdateSchema = z.object({
-  updates: z.array(z.object({
-    productId: z.string(),
-    variantId: z.string().optional(),
-    newStock: z.number().min(0)
-  })),
-  reason: z.string().optional()
-});
+// Sync stock
+router.post('/sync-stock', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
+  const products = await prisma.product.findMany({
+    include: { variants: true }
+  });
 
-router.patch('/stock/bulk', auth, adminOnly, asyncHandler(async (req, res) => {
-  const { updates, reason } = bulkUpdateSchema.parse(req.body);
+  let syncedCount = 0;
 
   await prisma.$transaction(async (tx) => {
-    for (const update of updates) {
-      if (update.variantId) {
-        const oldVariant = await tx.productVariant.findUnique({
-          where: { id: update.variantId }
-        });
-        
-        if (oldVariant) {
-          await tx.productVariant.update({
-            where: { id: update.variantId },
-            data: { stock: update.newStock }
-          });
-
-          await tx.stockMovement.create({
-            data: {
-              productId: update.productId,
-              productVariantId: update.variantId,
-              type: update.newStock > oldVariant.stock ? 'IN' : 'OUT',
-              quantity: Math.abs(update.newStock - oldVariant.stock),
-              previousStock: oldVariant.stock,
-              newStock: update.newStock,
-              reason: reason || 'Bulk adjustment'
-            }
-          });
-        }
-      } else {
-        const oldProduct = await tx.product.findUnique({
-          where: { id: update.productId }
-        });
-        
-        if (oldProduct) {
+    for (const product of products) {
+      if (product.variants.length > 0) {
+        const totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
+        if (product.stock !== totalStock) {
           await tx.product.update({
-            where: { id: update.productId },
-            data: { stock: update.newStock }
+            where: { id: product.id },
+            data: { stock: totalStock }
           });
-
-          await tx.stockMovement.create({
-            data: {
-              productId: update.productId,
-              type: update.newStock > oldProduct.stock ? 'IN' : 'OUT',
-              quantity: Math.abs(update.newStock - oldProduct.stock),
-              previousStock: oldProduct.stock,
-              newStock: update.newStock,
-              reason: reason || 'Bulk adjustment'
-            }
-          });
+          syncedCount++;
         }
       }
     }
   });
 
-  res.json({ message: `Updated stock for ${updates.length} items` });
+  res.json({ message: 'Stock synchronization completed', syncedCount });
 }));
 
 export default router;

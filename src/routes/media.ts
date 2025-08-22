@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { auth, adminOnly } from '../middlewares/auth';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -7,7 +7,7 @@ import { z } from 'zod';
 const router = Router();
 
 // GET /api/media - Get all media files
-router.get('/', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const { folder, search, page = '1', limit = '100', type } = req.query;
   
   const where: any = {};
@@ -18,9 +18,9 @@ router.get('/', asyncHandler(async (req, res) => {
   
   if (search) {
     where.OR = [
-      { filename: { contains: search as string, mode: 'insensitive' } },
-      { originalName: { contains: search as string, mode: 'insensitive' } },
-      { alt: { contains: search as string, mode: 'insensitive' } }
+      { filename: { contains: search as string } },
+      { originalName: { contains: search as string } },
+      { alt: { contains: search as string } }
     ];
   }
 
@@ -71,7 +71,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // GET /api/media/:id - Get single media file
-router.get('/:id', asyncHandler(async (req, res) => {
+router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const mediaFile = await prisma.mediaFile.findUnique({
@@ -95,7 +95,7 @@ const updateMediaSchema = z.object({
   folder: z.string().optional()
 });
 
-router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const data = updateMediaSchema.parse(req.body);
 
@@ -116,7 +116,7 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/media/:id - Delete media file
-router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:id', auth, adminOnly, asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   // First check if file exists and get usage count
@@ -149,7 +149,7 @@ router.delete('/:id', auth, adminOnly, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/media/folders/list - Get list of folders
-router.get('/folders/list', asyncHandler(async (req, res) => {
+router.get('/folders/list', asyncHandler(async (req: Request, res: Response) => {
   const folders = await prisma.mediaFile.findMany({
     select: { folder: true },
     distinct: ['folder']
