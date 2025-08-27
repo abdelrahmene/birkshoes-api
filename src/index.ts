@@ -25,6 +25,7 @@ import imagesRoutes from './routes/images';
 
 const app = express();
 
+app.set('trust proxy', true);
 // Security middleware avec configuration CORS adaptée
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -70,7 +71,9 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP'
+  message: 'Too many requests from this IP',
+   skip: (req) => !req.headers['x-forwarded-for']
+
 });
 app.use('/api/', limiter);
 

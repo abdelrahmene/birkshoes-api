@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+
+// Debug temporaire
+console.log('🔧 [CONFIG-DEBUG] ALLOWED_ORIGINS raw:', process.env.ALLOWED_ORIGINS);
+console.log('🔧 [CONFIG-DEBUG] ALLOWED_ORIGINS split:', process.env.ALLOWED_ORIGINS?.split(','));
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000'),

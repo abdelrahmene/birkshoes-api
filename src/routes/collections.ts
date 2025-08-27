@@ -5,6 +5,12 @@ import { asyncHandler } from '../middlewares/errorHandler';
 
 const router = Router();
 
+// Helper pour formatter une URL d'image
+const formatImageUrl = (path?: string | null): string | null => {
+  if (!path) return null;
+  return `${process.env.BASE_URL}${path}`;
+};
+
 // GET /api/collections
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const { includeProducts } = req.query;
@@ -29,6 +35,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
 
   const collectionsWithImages = collections.map(collection => ({
     ...collection,
+    image: formatImageUrl(collection.image),
     ...(includeProducts && {
       products: collection.products?.map((product: any) => ({
         ...product,
@@ -65,6 +72,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
 
   const collectionWithImages = {
     ...collection,
+    image: formatImageUrl(collection.image),
     products: collection.products?.map(product => ({
       ...product,
       images: product.images ? JSON.parse(product.images) : [],
@@ -106,7 +114,10 @@ router.post('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Res
     }
   });
 
-  res.status(201).json(collection);
+  res.status(201).json({
+    ...collection,
+    image: formatImageUrl(collection.image)
+  });
 }));
 
 // PUT /api/collections/:id
@@ -134,21 +145,23 @@ router.put('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: R
     }
   });
 
-  res.json(collection);
+  res.json({
+    ...collection,
+    image: formatImageUrl(collection.image)
+  });
 }));
 
 // DELETE /api/collections/:id
 router.delete('/:id', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
 
-  // Check if collection has products
   const productsCount = await prisma.product.count({
     where: { collectionId: id }
   });
 
   if (productsCount > 0) {
-    return res.status(400).json({ 
-      error: 'Cannot delete collection with products. Remove products first.' 
+    return res.status(400).json({
+      error: 'Cannot delete collection with products. Remove products first.'
     });
   }
 

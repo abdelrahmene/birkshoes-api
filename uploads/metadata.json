@@ -1,0 +1,79 @@
+[
+  {
+    "id": "e000fc14-fe75-4e5f-98a3-e9606e08b67a",
+    "filename": "80e418a9-3e4e-41ad-bf6a-11bf439b2b98.pdf",
+    "originalName": "u291647692_birkshoes_stor.pdf",
+    "mimeType": "application/pdf",
+    "size": 1341,
+    "url": "/uploads/content/80e418a9-3e4e-41ad-bf6a-11bf439b2b98.pdf",
+    "folder": "content",
+    "alt": "u291647692_birkshoes_stor.pdf",
+    "createdAt": "2025-08-20T06:41:46.355Z"
+  },
+  {
+    "id": "4bfcbafe-668d-4d77-9bbb-629f3bcb0861",
+    "filename": "53b543d6-f9a8-4572-90fe-79a9366b5507.jpg",
+    "originalName": "IMG_4461.JPG",
+    "mimeType": "image/jpeg",
+    "size": 10338395,
+    "url": "/uploads/content/53b543d6-f9a8-4572-90fe-79a9366b5507.jpg",
+    "folder": "content",
+    "alt": "IMG_4461.JPG",
+    "createdAt": "2025-08-20T06:45:15.743Z"
+  },
+  {
+    "id": "f7c40b9a-4800-4aa1-b76f-7f9a69f2f588",
+    "filename": "dd45a2c4-d36a-498e-a765-5703e36b7e3c.jpg",
+    "originalName": "IMG_4460.JPG",
+    "mimeType": "image/jpeg",
+    "size": 8758421,
+    "url": "/uploads/content/dd45a2c4-d36a-498e-a765-5703e36b7e3c.jpg",
+    "folder": "content",
+    "alt": "IMG_4460.JPG",
+    "createdAt": "2025-08-20T06:45:49.695Z"
+  },
+  {
+    "id": "a2ddcab7-5c80-4114-aedb-c073ddd81c3e",
+    "filename": "2455a9f7-d92f-47a0-a9ff-a9d41006ffe4.jpg",
+    "originalName": "IMG_4461.JPG",
+    "mimeType": "image/jpeg",
+    "size": 10338395,
+    "url": "/uploads/content/2455a9f7-d92f-47a0-a9ff-a9d41006ffe4.jpg",
+    "folder": "content",
+    "alt": "IMG_4461.JPG",
+    "createdAt": "2025-08-20T07:13:19.525Z"
+  },
+  {
+    "id": "dadb744f-b2db-4e09-b278-bdff374c029e",
+    "filename": "746e3474-13c6-4baf-a570-fd51dd5bbaaa.jpg",
+    "originalName": "IMG_4489.JPG",
+    "mimeType": "image/jpeg",
+    "size": 8018229,
+    "url": "/uploads/content/746e3474-13c6-4baf-a570-fd51dd5bbaaa.jpg",
+    "folder": "content",
+    "alt": "IMG_4489.JPG",
+    "createdAt": "2025-08-20T19:40:46.553Z"
+  },
+  {
+    "id": "72b28fc4-a2d4-45b2-9741-3f583479503a",
+    "filename": "7dfe5ef2-2479-4250-ba3e-51a6e2276922.jpg",
+    "originalName": "IMG_4491.JPG",
+    "mimeType": "image/jpeg",
+    "size": 9662068,
+    "url": "/uploads/content/7dfe5ef2-2479-4250-ba3e-51a6e2276922.jpg",
+    "folder": "content",
+    "alt": "IMG_4491.JPG",
+    "createdAt": "2025-08-21T00:30:51.198Z"
+  },
+  {
+    "id": "f250e9cb-b023-4e65-9614-a4219a36a4d4",
+    "filename": "7e6490b3-a789-4432-add6-f01c44156f91.jpg",
+    "originalName": "IMG_4493.JPG",
+    "mimeType": "image/jpeg",
+    "size": 8170576,
+    "url": "/uploads/content/7e6490b3-a789-4432-add6-f01c44156f91.jpg",
+    "folder": "content",
+    "alt": "IMG_4493.JPG",
+    "createdAt": "2025-08-21T01:07:12.904Z"
+  }
+]

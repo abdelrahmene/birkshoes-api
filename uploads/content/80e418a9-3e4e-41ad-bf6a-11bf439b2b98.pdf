@@ -1,0 +1,9 @@
+<div class="alert alert-danger" role="alert"><h1>Erreur</h1><p><strong>Analyse statique :</strong></p><p>1 erreurs trouvées lors de l'analyse.</p><p><ol><li>Une expression était attendue. (near "FROM" at position 8)</li></ol></p><p><strong>Requête SQL :</strong>  <a href="#" class="copyQueryBtn" data-text="SELECT  FROM `u291647692_birkshoes_stor`.`v_order_stats`">Copier</a>
+<a href="./url.php?url=https%3A%2F%2Fdev.mysql.com%2Fdoc%2Frefman%2F8.0%2Fen%2Fselect.html" target="mysql_doc"><img src="themes/dot.gif" title="Documentation" alt="Documentation" class="icon ic_b_help"></a><a href="index.php?route=/database/sql&sql_query=SELECT++FROM+%60u291647692_birkshoes_stor%60.%60v_order_stats%60&show_query=1&db=u291647692_birkshoes_stor"><span class="text-nowrap"><img src="themes/dot.gif" title="Éditer" alt="Éditer" class="icon ic_b_edit">&nbsp;Éditer</span></a>    </p>
+<p>
+SELECT  FROM `u291647692_birkshoes_stor`.`v_order_stats`
+</p>
+<p>
+    <strong>MySQL a répondu : </strong><a href="./url.php?url=https%3A%2F%2Fdev.mysql.com%2Fdoc%2Frefman%2F8.0%2Fen%2Fserver-error-reference.html" target="mysql_doc"><img src="themes/dot.gif" title="Documentation" alt="Documentation" class="icon ic_b_help"></a>
+</p>
+<code>#1064 - Erreur de syntaxe près de 'FROM `u291647692_birkshoes_stor`.`v_order_stats`' à la ligne 1</code><br></div>
