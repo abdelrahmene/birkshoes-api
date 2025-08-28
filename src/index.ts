@@ -107,6 +107,49 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// 🖼️ Configuration pour les images statiques
+app.use('/images', (req, res, next) => {
+  const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+
+  console.log('\n🎨 [STATIC-IMAGE] ====================================');
+  console.log(`📝 [STATIC-${requestId}] Requête image statique`);
+  console.log(`🔧 [STATIC-${requestId}] Détails:`, {
+    url: req.originalUrl,
+    path: req.path,
+    timestamp: new Date().toISOString()
+  });
+
+  // Vérification du fichier statique
+  const filePath = path.join(__dirname, '..', 'public', 'images', req.path);
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      console.log(`❌ [STATIC-${requestId}] Image non trouvée:`, {
+        requestedPath: req.path,
+        fullPath: filePath,
+        error: err.message
+      });
+    } else {
+      console.log(`✅ [STATIC-${requestId}] Image existe:`, {
+        requestedPath: req.path,
+        fullPath: filePath
+      });
+    }
+  });
+
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log(`🏁 [STATIC-${requestId}] Réponse:`, {
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      contentType: res.getHeader('content-type')
+    });
+    console.log('🎨 [STATIC-IMAGE] ====================================\n');
+  });
+
+  next();
+});
+
 // 🔧 Debug endpoint pour vérifier la configuration CORS
 app.get('/debug/cors', (req, res) => {
   console.log('🔧 [DEBUG] Headers de la requête:', req.headers);
@@ -130,17 +173,62 @@ app.get('/debug/cors', (req, res) => {
   res.json(debugInfo);
 });
 
-// 🖼️ Configuration globale pour les uploads avec CORS
+// 🖼️ Configuration globale pour les uploads avec CORS et logging détaillé
 app.use('/uploads', (req, res, next) => {
-  console.log('🌍 [UPLOADS-MIDDLEWARE] ====================================');
-  console.log(`🔧 [UPLOADS-CORS] ${req.method} ${req.originalUrl}`);
-  console.log(`🔧 [UPLOADS-CORS] Origin: ${req.headers.origin || 'Non spécifié'}`);
-  console.log(`🔧 [UPLOADS-CORS] Referer: ${req.headers.referer || 'Non spécifié'}`);
-  console.log(`🔧 [UPLOADS-CORS] User-Agent: ${(req.headers['user-agent'] || '').substring(0, 50)}...`);
-  console.log(`🔧 [UPLOADS-CORS] Accept: ${req.headers.accept || 'Non spécifié'}`);
-  console.log(`🔧 [UPLOADS-CORS] Host: ${req.headers.host || 'Non spécifié'}`);
-  console.log('🌍 [UPLOADS-MIDDLEWARE] ====================================');
-  
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+
+  console.log('\n🌍 [UPLOADS-REQUEST] ====================================');
+  console.log(`� [UPLOADS-${requestId}] Nouvelle requête image`);
+  console.log(`🔧 [UPLOADS-${requestId}] Détails de la requête:`, {
+    method: req.method,
+    url: req.originalUrl,
+    path: req.path,
+    query: req.query,
+    timestamp: new Date().toISOString()
+  });
+
+  // Log des headers importants
+  console.log(`� [UPLOADS-${requestId}] Headers:`, {
+    origin: req.headers.origin || 'Non spécifié',
+    referer: req.headers.referer || 'Non spécifié',
+    userAgent: req.headers['user-agent'],
+    accept: req.headers.accept,
+    host: req.headers.host,
+    range: req.headers.range,
+    ifNoneMatch: req.headers['if-none-match'],
+    ifModifiedSince: req.headers['if-modified-since']
+  });
+
+  // Vérification du fichier
+  const filePath = path.join(__dirname, '..', req.path);
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      console.log(`❌ [UPLOADS-${requestId}] Fichier non trouvé:`, {
+        requestedPath: req.path,
+        fullPath: filePath,
+        error: err.message
+      });
+    } else {
+      console.log(`✅ [UPLOADS-${requestId}] Fichier existe:`, {
+        requestedPath: req.path,
+        fullPath: filePath
+      });
+    }
+  });
+
+  // Intercepter la fin de la requête pour les logs
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    console.log(`🏁 [UPLOADS-${requestId}] Requête terminée:`, {
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      contentType: res.getHeader('content-type'),
+      contentLength: res.getHeader('content-length')
+    });
+    console.log('🌍 [UPLOADS-REQUEST] ====================================\n');
+  });
+
   // Headers CORS obligatoires pour tous les uploads
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',

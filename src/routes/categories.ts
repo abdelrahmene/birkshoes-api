@@ -40,7 +40,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     })
   }));
 
-  res.json(categoriesWithImages);
+  res.json({ categories: categoriesWithImages });
 }));
 
 // GET /api/categories/:id

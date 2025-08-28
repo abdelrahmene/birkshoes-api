@@ -50,7 +50,67 @@ const upload = multer({
   }
 });
 
-// Upload single file
+// Upload single file - route simple (CORRIGEE pour sauvegarder en DB)
+router.post('/', upload.single('file'), asyncHandler(async (req: AuthRequest, res: Response) => {
+  console.log('📎 [UPLOAD] Nouvelle requête d\'upload...');
+  console.log('📎 [UPLOAD] File reçu:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    filename: req.file.filename,
+    size: req.file.size,
+    mimetype: req.file.mimetype
+  } : 'Aucun fichier');
+  
+  if (!req.file) {
+    console.log('❌ [UPLOAD] Aucun fichier uploadé');
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const folder = req.body.folder || 'content';
+  const url = `/uploads/${folder}/${req.file.filename}`;
+  
+  try {
+    // Sauvegarder le fichier dans la base de données
+    const mediaFile = await prisma.mediaFile.create({
+      data: {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+        url: url,
+        alt: req.body.alt || null,
+        tags: req.body.tags ? JSON.stringify(req.body.tags) : null,
+        folder: folder,
+        uploadedBy: req.user?.id || null
+      }
+    });
+
+    console.log('✅ [UPLOAD] Fichier sauvegardé en DB:', {
+      id: mediaFile.id,
+      filename: mediaFile.filename,
+      url: mediaFile.url
+    });
+    
+    res.json({ 
+      success: true,
+      id: mediaFile.id,
+      url,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size,
+      mimeType: req.file.mimetype
+    });
+  } catch (error) {
+    console.error('❌ [UPLOAD] Erreur lors de la sauvegarde en DB:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur lors de la sauvegarde du fichier' 
+    });
+  }
+}));
+
+// Upload single file - route complète
 router.post('/single', auth, adminOnly, upload.single('file'), asyncHandler(async (req: AuthRequest, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -66,7 +126,7 @@ router.post('/single', auth, adminOnly, upload.single('file'), asyncHandler(asyn
       mimeType: req.file.mimetype,
       size: req.file.size,
       path: req.file.path,
-      url: `/uploads${folder}${req.file.filename}`,
+      url: `/uploads/${folder}/${req.file.filename}`,
       alt: alt || null,
       tags: tags ? JSON.stringify(tags) : null,
       folder: folder,
@@ -97,7 +157,7 @@ router.post('/multiple', auth, adminOnly, upload.array('files', 10), asyncHandle
           mimeType: file.mimetype,
           size: file.size,
           path: file.path,
-          url: `/uploads${folder}${file.filename}`,
+          url: `/uploads/${folder}/${file.filename}`,
           alt: alt || null,
           tags: tags ? JSON.stringify(tags) : null,
           folder: folder,

@@ -44,7 +44,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     })
   }));
 
-  res.json(collectionsWithImages);
+  res.json({ collections: collectionsWithImages });
 }));
 
 // GET /api/collections/:id

@@ -96,6 +96,49 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
   });
 }));
 
+// Get product by slug
+router.get('/slug/:slug', asyncHandler(async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  
+  const product = await prisma.product.findUnique({
+    where: { slug },
+    include: {
+      category: {
+        select: { id: true, name: true, slug: true }
+      },
+      collection: {
+        select: { id: true, name: true, slug: true }
+      },
+      variants: {
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          stock: true,
+          options: true,
+          sku: true
+        }
+      }
+    }
+  });
+
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  const productWithParsedData = {
+    ...product,
+    images: product.images ? JSON.parse(product.images) : [],
+    tags: product.tags ? JSON.parse(product.tags) : [],
+    variants: product.variants.map(variant => ({
+      ...variant,
+      options: variant.options ? JSON.parse(variant.options) : {}
+    }))
+  };
+
+  res.json(productWithParsedData);
+}));
+
 // Get single product
 router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -143,10 +186,30 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
 router.post('/', auth, adminOnly, asyncHandler(async (req: AuthRequest, res: Response) => {
   const data: CreateProductRequest = req.body;
 
-  // Generate slug from name
-  const slug = data.name.toLowerCase()
+  // Generate unique slug from name
+  let baseSlug = data.name.toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
+  
+  let slug = baseSlug;
+  let counter = 1;
+  
+  // Check for existing slug
+  while (await prisma.product.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  // Check for existing SKU if provided
+  if (data.sku) {
+    const existingSku = await prisma.product.findUnique({ where: { sku: data.sku } });
+    if (existingSku) {
+      return res.status(400).json({ 
+        error: "Resource already exists", 
+        details: "A product with this SKU already exists" 
+      });
+    }
+  }
 
   const product = await prisma.product.create({
     data: {
