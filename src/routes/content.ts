@@ -181,7 +181,7 @@ router.put('/category-pages/:id', auth, adminOnly, asyncHandler(async (req: Requ
 // GET /api/content/media - Lire fichiers depuis filesystem
 router.get('/media', asyncHandler(async (req: Request, res: Response) => {
   const { folder = 'content', search, page = '1', limit = '50' } = req.query;
-  const baseUrl = process.env.API_URL || 'http://localhost:4000';
+  const baseUrl = process.env.API_URL || 'https://api.birkshoes.store';
   const uploadsDir = path.join('C:', 'Users', 'abdelrahmene fares', 'Desktop', 'admin.Birkshoes.store', 'public', 'uploads');
   const contentPath = path.join(uploadsDir, folder as string);
 
